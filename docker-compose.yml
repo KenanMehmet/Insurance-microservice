@@ -1,0 +1,58 @@
+version: "3.6"
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app/
+    depends_on:
+      - dynamodb-local
+    networks:
+      - core_rabbitmq
+      - dynamodb-local
+    env_file: config.env
+    environment:
+      - FLASK_DEBUG=True
+      - TESTING=True
+      - PREFERRED_URL_SCHEME=http
+      - AWS_REGION=dummy
+      - AWS_KEY=dummy
+      - AWS_SECRET=dummy
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - CORE_ENDPOINT=http://core_web_1:8000
+  worker:
+    build: .
+    command: "python -i worker_run.py"
+    stdin_open: true 
+    volumes:
+      - ./:/app/
+    depends_on:
+      - dynamodb-local
+    environment:
+      - RABBIT_ENV=dev
+      - RABBIT_URL=rabbitmq
+      - AWS_REGION=dummy
+      - AWS_KEY=dummy
+      - AWS_SECRET=dummy
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+    networks:
+      - core_rabbitmq
+      - dynamodb-local
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./"
+    image: "amazon/dynamodb-local:latest"
+    ports:
+      - "8002:8000"
+    volumes:
+      - dynamodb_vol:/home/dynamodblocal/
+    working_dir: /home/dynamodblocal
+    networks:
+      - dynamodb-local
+volumes:
+  dynamodb_vol:
+    driver: local
+networks:
+  core_rabbitmq:
+    external: true
+  dynamodb-local:

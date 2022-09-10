@@ -1,0 +1,38 @@
+stages:
+  - build_image
+  - deploy
+
+before_script:
+  - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  - export TIMESTAMP=$(date +%s)
+
+build_staging:
+  only:
+    refs:
+      - staging
+      - managed_service
+  tags:
+    - docker
+  stage: build_image
+  environment:
+    name: staging
+    url: http://ms-insurance.staging.pc.internal
+  script:
+  - docker build -t $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME -t $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME-$CI_COMMIT_SHA-$TIMESTAMP --file .docker/Dockerfile .
+  - docker push $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME-$CI_COMMIT_SHA-$TIMESTAMP
+  - docker push $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME
+
+build_prod:
+  only:
+    refs:
+      - master
+  tags:
+    - docker
+  stage: build_image
+  environment:
+    name: prod
+    url: http://ms-insurance.prod.pc.internal
+  script:
+  - docker build -t $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME -t $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME-$CI_COMMIT_SHA-$TIMESTAMP --file .docker/Dockerfile .
+  - docker push $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME-$CI_COMMIT_SHA-$TIMESTAMP
+  - docker push $CI_REGISTRY_IMAGE:$CI_ENVIRONMENT_NAME
